@@ -1419,6 +1419,7 @@ source = { editable = "." }
 dependencies = [
     { name = "fsspec" },
     { name = "h5netcdf" },
+    { name = "h5py" },
     { name = "loguru" },
     { name = "mlwp-data-specs" },
     { name = "s3fs" },
@@ -1449,6 +1450,7 @@ requires-dist = [
     { name = "certifi", marker = "extra == 'test'", specifier = ">=2021.10.8" },
     { name = "fsspec" },
     { name = "h5netcdf" },
+    { name = "h5py" },
     { name = "loguru" },
     { name = "mlwp-data-specs", git = "https://github.com/mlwp-tools/mlwp-data-specs?rev=059f382" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.0.0" },
