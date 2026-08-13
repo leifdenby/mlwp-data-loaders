@@ -23,6 +23,10 @@ dependencies = [
 profile = "black"
 
 [project.optional-dependencies]
+ifs = [
+  "cfgrib",
+  "eccodeslib",
+]
 test = [
   "pytest>=8.0.0",
   "certifi>=2021.10.8",
@@ -39,6 +43,9 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "network: marks tests that require network access (e.g. fetching sample data from object storage)",
+]
 
 [tool.uv.sources]
 mlwp-data-specs = { git = "https://github.com/mlwp-tools/mlwp-data-specs", rev = "059f382" }
@@ -52,4 +59,5 @@ dev = [
 ]
 test = [
     "pooch",
+    "cfgrib",
 ]
