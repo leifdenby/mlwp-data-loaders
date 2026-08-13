@@ -2,14 +2,7 @@
 
 from __future__ import annotations
 
-from mlwp_data_specs.api import (
-    SPACE_TRAIT_ATTR,
-    TIME_TRAIT_ATTR,
-    UNCERTAINTY_TRAIT_ATTR,
-)
-
 from mlwp_data_loaders.api import load_and_validate_dataset
-from mlwp_data_loaders.mxalign_api import validate_dataset_with_mxalign
 
 # Use small CERRA sample dataset stored on EWC (European Weather Cloud)
 # S3-compatible object store for testing.
@@ -35,18 +28,6 @@ def test_load_dataset_opens_anemoi_store_from_ewc() -> None:
         chunks=None,
         return_validation_report=True,
     )
-
-    # Note: mxalign validation is temporarily kept here during early development
-    # to ensure `mlwp-data-specs` behaves identically. It will eventually be removed.
-    report_mxalign = validate_dataset_with_mxalign(
-        ds,
-        time=ds.attrs.get(TIME_TRAIT_ATTR),
-        space=ds.attrs.get(SPACE_TRAIT_ATTR),
-        uncertainty=ds.attrs.get(UNCERTAINTY_TRAIT_ATTR),
-    )
-    if report_mxalign.has_fails():
-        report_mxalign.console_print()
-    assert not report_mxalign.has_fails()
 
     if report_specs.has_fails():
         report_specs.console_print()

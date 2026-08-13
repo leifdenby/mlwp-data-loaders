@@ -2,14 +2,7 @@
 
 from __future__ import annotations
 
-from mlwp_data_specs.api import (
-    SPACE_TRAIT_ATTR,
-    TIME_TRAIT_ATTR,
-    UNCERTAINTY_TRAIT_ATTR,
-)
-
 from mlwp_data_loaders.api import load_and_validate_dataset
-from mlwp_data_loaders.mxalign_api import validate_dataset_with_mxalign
 
 DATASET_PATH = [
     "s3://mlwp-sample-datasets/anemoi-inference/unknown-revision/"
@@ -36,16 +29,6 @@ def test_load_dataset_opens_anemoi_inference_from_ewc() -> None:
         parallel=False,
         return_validation_report=True,
     )
-
-    report_mxalign = validate_dataset_with_mxalign(
-        ds,
-        time=ds.attrs.get(TIME_TRAIT_ATTR),
-        space=ds.attrs.get(SPACE_TRAIT_ATTR),
-        uncertainty=ds.attrs.get(UNCERTAINTY_TRAIT_ATTR),
-    )
-    if report_mxalign.has_fails():
-        report_mxalign.console_print()
-    assert not report_mxalign.has_fails()
 
     if report_specs.has_fails():
         report_specs.console_print()
