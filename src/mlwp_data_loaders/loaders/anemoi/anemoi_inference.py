@@ -5,6 +5,9 @@ from mlwp_data_specs.api import (
     SPACE_TRAIT_ATTR,
     TIME_TRAIT_ATTR,
     UNCERTAINTY_TRAIT_ATTR,
+    Space,
+    Time,
+    Uncertainty,
 )
 
 
@@ -84,9 +87,9 @@ def load_dataset(
         {"standard_name": "latitude", "units": "degrees_north"}
     )
 
-    ds_out.attrs[TIME_TRAIT_ATTR] = "forecast"
-    ds_out.attrs[SPACE_TRAIT_ATTR] = "grid"
-    ds_out.attrs[UNCERTAINTY_TRAIT_ATTR] = "deterministic"
+    ds_out.attrs[TIME_TRAIT_ATTR] = Time.FORECAST
+    ds_out.attrs[SPACE_TRAIT_ATTR] = Space.GRID
+    ds_out.attrs[UNCERTAINTY_TRAIT_ATTR] = Uncertainty.DETERMINISTIC
 
     return ds_out
 
