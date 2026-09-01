@@ -7,6 +7,9 @@ from mlwp_data_specs.api import (
     SPACE_TRAIT_ATTR,
     TIME_TRAIT_ATTR,
     UNCERTAINTY_TRAIT_ATTR,
+    Space,
+    Time,
+    Uncertainty,
 )
 
 DROP_VARS = [
@@ -80,9 +83,9 @@ def load_dataset(
             )
 
     ds_final = ds_selected.to_dataset(dim="variable")
-    ds_final.attrs[TIME_TRAIT_ATTR] = "observation"
-    ds_final.attrs[SPACE_TRAIT_ATTR] = "grid"
-    ds_final.attrs[UNCERTAINTY_TRAIT_ATTR] = "deterministic"
+    ds_final.attrs[TIME_TRAIT_ATTR] = Time.OBSERVATION
+    ds_final.attrs[SPACE_TRAIT_ATTR] = Space.GRID
+    ds_final.attrs[UNCERTAINTY_TRAIT_ATTR] = Uncertainty.DETERMINISTIC
     return ds_final
 
 

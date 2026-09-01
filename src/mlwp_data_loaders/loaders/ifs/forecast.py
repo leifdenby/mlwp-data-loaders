@@ -16,6 +16,9 @@ from mlwp_data_specs.api import (
     SPACE_TRAIT_ATTR,
     TIME_TRAIT_ATTR,
     UNCERTAINTY_TRAIT_ATTR,
+    Space,
+    Time,
+    Uncertainty,
 )
 
 try:
@@ -111,16 +114,16 @@ def load_dataset(
     )
 
     if "member" in ds.dims:
-        uncertainty = "ensemble"
+        uncertainty = Uncertainty.ENSEMBLE
     elif "quantile" in ds.dims:
-        uncertainty = "quantile"
+        uncertainty = Uncertainty.QUANTILE
     else:
-        uncertainty = "deterministic"
+        uncertainty = Uncertainty.DETERMINISTIC
 
     ds = ds.transpose("reference_time", "lead_time", ...)
 
-    ds.attrs[TIME_TRAIT_ATTR] = "forecast"
-    ds.attrs[SPACE_TRAIT_ATTR] = "grid"
+    ds.attrs[TIME_TRAIT_ATTR] = Time.FORECAST
+    ds.attrs[SPACE_TRAIT_ATTR] = Space.GRID
     ds.attrs[UNCERTAINTY_TRAIT_ATTR] = uncertainty
 
     return ds
