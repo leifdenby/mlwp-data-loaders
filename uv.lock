@@ -775,7 +775,6 @@ wheels = [
 
 [[package]]
 name = "mlwp-data-loaders"
-version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fsspec" },
