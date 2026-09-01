@@ -17,7 +17,5 @@ extra), exposed through both a Python API
 validation report) and a CLI entry point (`mlwp.load_and_validate_dataset`).
 Loaders can be bundled (by dotted module path) or user-provided (by `.py`
 file path); a loader module implements `load_dataset(path, **kwargs) ->
-xr.Dataset` and sets the `mlwp_time_trait`, `mlwp_space_trait`, and
-`mlwp_uncertainty_trait` attributes, using the `Space`, `Time`, and
-`Uncertainty` enums from `mlwp-data-specs`, so the result is validated
-automatically.
+xr.Dataset` and sets the required trait attributes so the result is
+validated automatically.
