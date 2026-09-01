@@ -10,6 +10,9 @@ from mlwp_data_specs.api import (
     SPACE_TRAIT_ATTR,
     TIME_TRAIT_ATTR,
     UNCERTAINTY_TRAIT_ATTR,
+    Space,
+    Time,
+    Uncertainty,
 )
 
 COORDS = {
@@ -105,8 +108,8 @@ def load_dataset(
         "valid_time", "point_index"
     )
 
-    ds_final.attrs[TIME_TRAIT_ATTR] = "observation"
-    ds_final.attrs[SPACE_TRAIT_ATTR] = "point"
-    ds_final.attrs[UNCERTAINTY_TRAIT_ATTR] = "deterministic"
+    ds_final.attrs[TIME_TRAIT_ATTR] = Time.OBSERVATION
+    ds_final.attrs[SPACE_TRAIT_ATTR] = Space.POINT
+    ds_final.attrs[UNCERTAINTY_TRAIT_ATTR] = Uncertainty.DETERMINISTIC
 
     return ds_final
