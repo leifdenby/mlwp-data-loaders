@@ -8,11 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `mlwp_data_loaders.ensemble.apply_member_conventions`: renames an ensemble's member coordinate to `member`, casts its labels to integers, sets the CF `realization` attributes and makes it the leading dimension. Loaders that return ensembles call it last. @mpvginde
+- `variables` argument in the IFS forecast loader. @mpvginde
 - `variables` argument in the `anemoi-inference` loader to load a subset of the variables. @mpvginde
 - `valid_times` argument (label slice) in the `anemoi-datasets` loader to load part of the record. @mpvginde
 
+### Fixed
+- The IFS forecast loader opens files with cfgrib whatever their extension. @mpvginde
 
 ### Changed
+- The IFS forecast loader is lazy: each dask chunk holds one lead time of one reference time on the whole grid, with the members grouped up to dask's `array.chunk-size`, so selecting lead times reads only their fields. The old default (`chunks=None`) read all files into memory. **Breaking:** the `chunks` argument is removed. @mpvginde
+- The IFS forecast loader returns `(member, reference_time, lead_time, grid_index)`, keeps a scalar `member` for a file holding a single control or perturbed member, and skips files whose lead times, members or variables differ from the most common ones, with a warning. @mpvginde
+- `dask` is now a required dependency. @mpvginde
 - The `anemoi-inference` loader reads only `time` from each file when loading, through h5netcdf directly, instead of opening every file with `xr.open_dataset` (about 3 s per file with 70 variables). Its dask graph no longer depends on the number of files: one layer per variable, with one chunk per file. **Breaking:** the `chunks`, `engine` and `parallel` arguments and the keyword arguments forwarded to `xr.open_dataset` are removed. @mpvginde
 - The `anemoi-inference` loader skips files whose lead times differ from the most common ones (e.g. a run that stopped early) or that lack a requested variable, with a warning, instead of failing. @mpvginde
 - `dask` is now a required dependency. @mpvginde
