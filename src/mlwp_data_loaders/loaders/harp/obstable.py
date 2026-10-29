@@ -163,8 +163,8 @@ def load_dataset(
     # a single dask layer that calls _extract_variable_array on every chunk of
     # `data`, so computing several variables still reads each chunk of valid
     # times only once.
-    # dask's `meta`: an empty array of the result's type, dtype and number of
-    # dims, so dask need not call _extract_variable_array to find them out
+    # `empty_result` is an empty array of the result's type, dtype and number
+    # of dims, so dask need not call _extract_variable_array to find them out
     empty_result = np.empty((0, 0), dtype=np.float64)
     data_vars = {}
     for index, name in enumerate(variables):
@@ -176,6 +176,7 @@ def load_dataset(
             token=f"harp-obstable-{name}",  # stable, readable name for the layer
         )
         data_vars[name] = (("valid_time", "code"), variable_data)
+
     coords = {
         "valid_time": times.astype("datetime64[s]").astype("datetime64[ns]"),
         "code": codes,

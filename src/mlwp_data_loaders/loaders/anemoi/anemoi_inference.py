@@ -129,8 +129,8 @@ def load_dataset(
     # that file's path into its (1, lead_time, grid_index) values.
     data_vars = {}
     for name, template in templates.items():
-        # dask's `meta`: an empty array of the result's type, dtype and number
-        # of dims, so dask need not call _read_variable to find them out
+        # `empty_result` is an empty array of the result's type, dtype and
+        # number of dims, so dask need not call _read_variable to find them out
         empty_result = np.empty((0, 0, 0), dtype=template.dtype)
         variable_data = path_blocks.map_blocks(
             _read_variable,
@@ -146,6 +146,7 @@ def load_dataset(
             variable_data,
             attrs=template.attrs,
         )
+
     latitude.attrs.update({"standard_name": "latitude", "units": "degrees_north"})
     longitude.attrs.update({"standard_name": "longitude", "units": "degrees_east"})
     coords = {
