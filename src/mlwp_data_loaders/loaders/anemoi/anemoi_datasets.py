@@ -103,12 +103,12 @@ def load_dataset(
     )  # type: ignore
 
     # all variables in the store, in the order of its `variable` axis
-    store_variable_names = list(ds.attrs["variables"])
+    available_variable_names = list(ds.attrs["variables"])
     if variables is None:
-        variables = [name for name in store_variable_names if name not in DROP_VARS]
+        variables = [name for name in available_variable_names if name not in DROP_VARS]
     elif isinstance(variables, str):
         variables = [variables]
-    missing = [name for name in variables if name not in store_variable_names]
+    missing = [name for name in variables if name not in available_variable_names]
     if missing:
         raise ValueError(f"Variables {missing} not found in {path}")
 
@@ -146,7 +146,7 @@ def load_dataset(
     data_vars = {}
     for name in variables:
         # position of the variable along the store's `variable` axis
-        index = store_variable_names.index(name)
+        index = available_variable_names.index(name)
         variable_data = store_data.map_blocks(
             _extract_variable_array,
             index,
