@@ -94,7 +94,7 @@ def load_dataset(
         within ``valid_times``.
     """
     # No dask yet: indexing the backend arrays below only composes an indexer
-    ds = xr.open_zarr(
+    ds_store = xr.open_zarr(
         path,
         chunks=None,
         consolidated=consolidated,
@@ -102,16 +102,17 @@ def load_dataset(
         **kwargs,
     )  # type: ignore
 
-    names = list(ds.attrs["variables"])
+    # all variables in the store, in the order of its `variable` axis
+    store_variable_names = list(ds_store.attrs["variables"])
     if variables is None:
-        variables = [name for name in names if name not in DROP_VARS]
+        variables = [name for name in store_variable_names if name not in DROP_VARS]
     elif isinstance(variables, str):
         variables = [variables]
-    missing = [name for name in variables if name not in names]
+    missing = [name for name in variables if name not in store_variable_names]
     if missing:
         raise ValueError(f"Variables {missing} not found in {path}")
 
-    dates = pd.DatetimeIndex(ds["dates"].values.astype("datetime64[ns]"))
+    dates = pd.DatetimeIndex(ds_store["dates"].values.astype("datetime64[ns]"))
     time_slice = slice(None)
     if valid_times is not None:
         time_slice = dates.slice_indexer(valid_times.start, valid_times.stop)
@@ -121,24 +122,32 @@ def load_dataset(
     # Keep the full variable axis and select ensemble member 0 with an integer:
     # selecting variables with a list would send every read through zarr's
     # orthogonal indexing, which is about 3x slower and needs 2x the memory.
-    data = (
-        ds["data"]
+    # The lazy (time, variable, cell) dask array of the whole store, with one
+    # dask chunk per on-disk chunk
+    store_data = (
+        ds_store["data"]
         .isel(time=time_slice, ensemble=0)
-        .chunk({"time": ds["data"].encoding["chunks"][0], "variable": -1, "cell": -1})
+        .chunk(
+            {
+                "time": ds_store["data"].encoding["chunks"][0],  # on-disk chunk
+                "variable": -1,  # all variables in one chunk
+                "cell": -1,  # the whole grid in one chunk
+            }
+        )
         .data
     )
-    # Split `data` into one lazy (valid_time, grid_index) array per variable.
-    # Each is a single dask layer that calls _extract_variable_array on every
-    # chunk of `data`, so computing several variables still reads each
-    # on-disk chunk only once.
+    # Split `store_data` into one lazy (valid_time, grid_index) array per
+    # variable. Each is a single dask layer that calls _extract_variable_array
+    # on every chunk of `store_data`, so computing several variables still
+    # reads each on-disk chunk only once.
     # `empty_result` is an empty array of the result's type, dtype and number
     # of dims, so dask need not call _extract_variable_array to find them out
-    empty_result = np.empty((0, 0), dtype=data.dtype)
+    empty_result = np.empty((0, 0), dtype=store_data.dtype)
     data_vars = {}
     for name in variables:
         # position of the variable along the store's `variable` axis
-        index = names.index(name)
-        variable_data = data.map_blocks(
+        index = store_variable_names.index(name)
+        variable_data = store_data.map_blocks(
             _extract_variable_array,
             index,
             drop_axis=1,  # the variable axis is not in the result
@@ -155,12 +164,12 @@ def load_dataset(
         ),
         "latitude": (
             "grid_index",
-            ds["latitudes"].values.astype(np.float32),
+            ds_store["latitudes"].values.astype(np.float32),
             {"standard_name": "latitude", "units": "degrees_north"},
         ),
         "longitude": (
             "grid_index",
-            ds["longitudes"].values.astype(np.float32),
+            ds_store["longitudes"].values.astype(np.float32),
             {"standard_name": "longitude", "units": "degrees_east"},
         ),
     }
