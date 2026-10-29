@@ -99,6 +99,16 @@ def load_dataset(
     xr.Dataset
         ``(valid_time, point_index)`` variables with ``code``, latitude,
         longitude and altitude coordinates and the mlwp trait attributes.
+
+    Raises
+    ------
+    NotImplementedError
+        If more than one path is given.
+    FileNotFoundError
+        If the SQLite file does not exist.
+    ValueError
+        If the file has no observation table, the table is empty, or any of
+        ``variables`` is not a column of it.
     """
     if isinstance(paths, list):
         if len(paths) > 1:

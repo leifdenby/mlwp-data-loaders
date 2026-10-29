@@ -45,6 +45,13 @@ Then run the hooks locally with:
 pre-commit run --all-files
 ```
 
+Docstrings follow the [numpy
+convention](https://numpydoc.readthedocs.io/en/latest/format.html). flake8
+checks them with `flake8-docstrings` (every public module, function and class
+has one) and `pydoclint` (the `Parameters`, `Returns` and `Raises` sections
+match the signature and body). Types in docstrings are written in numpy prose
+(`str or list of str, optional`) and are not checked against the annotations.
+
 You can also install the git hook so checks run before each commit:
 
 ```bash

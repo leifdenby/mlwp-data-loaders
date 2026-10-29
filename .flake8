@@ -1,6 +1,10 @@
 [flake8]
 max-line-length = 88
 extend-ignore = E203
-select = C,E,F,W,B,B950
-ignore = E203, E501, W503
+select = C,E,F,W,B,B950,D,DOC
+# DOC105/DOC203: docstrings give types in numpy prose ("str or list of str,
+# optional"), which pydoclint can't match against the annotations
+ignore = E203, E501, W503, DOC105, DOC203
 per-file-ignores = __init__.py:F401
+docstring-convention = numpy
+style = numpy

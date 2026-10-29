@@ -70,6 +70,11 @@ def load_dataset(
     xr.Dataset
         ``(reference_time, lead_time, grid_index)`` variables with
         latitude/longitude coordinates and the mlwp trait attributes.
+
+    Raises
+    ------
+    ValueError
+        If any of ``variables`` is not a gridded variable of the files.
     """
     paths = [paths] if isinstance(paths, str) else list(paths)
     if isinstance(variables, str):

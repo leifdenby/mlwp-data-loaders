@@ -82,6 +82,13 @@ def load_dataset(
     xr.Dataset
         ``([member,] reference_time, lead_time, grid_index)`` variables with
         latitude/longitude coordinates and the mlwp trait attributes.
+
+    Raises
+    ------
+    TypeError
+        If ``chunks`` is passed (no longer supported).
+    ValueError
+        If any of ``variables`` is not in the most common file layout.
     """
     if "chunks" in kwargs:
         raise TypeError(

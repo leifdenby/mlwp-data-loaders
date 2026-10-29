@@ -86,6 +86,12 @@ def load_dataset(
     xr.Dataset
         ``(valid_time, grid_index)`` variables with latitude/longitude
         coordinates and the mlwp trait attributes.
+
+    Raises
+    ------
+    ValueError
+        If any of ``variables`` is not in the dataset, or no time steps fall
+        within ``valid_times``.
     """
     # No dask yet: indexing the backend arrays below only composes an indexer
     ds = xr.open_zarr(
