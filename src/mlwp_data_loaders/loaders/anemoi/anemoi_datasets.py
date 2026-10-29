@@ -94,7 +94,7 @@ def load_dataset(
         within ``valid_times``.
     """
     # No dask yet: indexing the backend arrays below only composes an indexer
-    ds_store = xr.open_zarr(
+    ds = xr.open_zarr(
         path,
         chunks=None,
         consolidated=consolidated,
@@ -103,7 +103,7 @@ def load_dataset(
     )  # type: ignore
 
     # all variables in the store, in the order of its `variable` axis
-    store_variable_names = list(ds_store.attrs["variables"])
+    store_variable_names = list(ds.attrs["variables"])
     if variables is None:
         variables = [name for name in store_variable_names if name not in DROP_VARS]
     elif isinstance(variables, str):
@@ -112,7 +112,7 @@ def load_dataset(
     if missing:
         raise ValueError(f"Variables {missing} not found in {path}")
 
-    dates = pd.DatetimeIndex(ds_store["dates"].values.astype("datetime64[ns]"))
+    dates = pd.DatetimeIndex(ds["dates"].values.astype("datetime64[ns]"))
     time_slice = slice(None)
     if valid_times is not None:
         time_slice = dates.slice_indexer(valid_times.start, valid_times.stop)
@@ -125,11 +125,11 @@ def load_dataset(
     # The lazy (time, variable, cell) dask array of the whole store, with one
     # dask chunk per on-disk chunk
     store_data = (
-        ds_store["data"]
+        ds["data"]
         .isel(time=time_slice, ensemble=0)
         .chunk(
             {
-                "time": ds_store["data"].encoding["chunks"][0],  # on-disk chunk
+                "time": ds["data"].encoding["chunks"][0],  # on-disk chunk
                 "variable": -1,  # all variables in one chunk
                 "cell": -1,  # the whole grid in one chunk
             }
@@ -164,12 +164,12 @@ def load_dataset(
         ),
         "latitude": (
             "grid_index",
-            ds_store["latitudes"].values.astype(np.float32),
+            ds["latitudes"].values.astype(np.float32),
             {"standard_name": "latitude", "units": "degrees_north"},
         ),
         "longitude": (
             "grid_index",
-            ds_store["longitudes"].values.astype(np.float32),
+            ds["longitudes"].values.astype(np.float32),
             {"standard_name": "longitude", "units": "degrees_east"},
         ),
     }
