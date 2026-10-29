@@ -127,20 +127,25 @@ def load_dataset(
         .chunk({"time": ds["data"].encoding["chunks"][0], "variable": -1, "cell": -1})
         .data
     )
-    meta = np.empty((0, 0), dtype=data.dtype)
-    data_vars = {
-        name: (
-            ("valid_time", "grid_index"),
-            data.map_blocks(
-                _take_variable,
-                names.index(name),
-                drop_axis=1,
-                meta=meta,
-                token=f"anemoi-{name}",
-            ),
+    # Split `data` into one lazy (valid_time, grid_index) array per variable.
+    # Each is a single dask layer that calls _extract_variable_array on every
+    # chunk of `data`, so computing several variables still reads each
+    # on-disk chunk only once.
+    # dask's `meta`: an empty array of the result's type, dtype and number of
+    # dims, so dask need not call _extract_variable_array to find them out
+    empty_result = np.empty((0, 0), dtype=data.dtype)
+    data_vars = {}
+    for name in variables:
+        # position of the variable along the store's `variable` axis
+        index = names.index(name)
+        variable_data = data.map_blocks(
+            _extract_variable_array,
+            index,
+            drop_axis=1,  # the variable axis is not in the result
+            meta=empty_result,
+            token=f"anemoi-{name}",  # stable, readable name for the layer
         )
-        for name in variables
-    }
+        data_vars[name] = (("valid_time", "grid_index"), variable_data)
     coords = {
         "valid_time": (
             "valid_time",
@@ -166,16 +171,21 @@ def load_dataset(
     return ds_out
 
 
-def _take_variable(block: np.ndarray, index: int) -> np.ndarray:
-    """Return one variable of a ``(time, variable, cell)`` block.
+def _extract_variable_array(array: np.ndarray, index: int) -> np.ndarray:
+    """Extract one variable from a ``(time, variable, cell)`` array.
 
-    The copy lets the block holding all variables be freed as soon as the
-    variables needed from it are taken, instead of living as long as a view.
+    ``map_blocks`` calls this once per chunk of the dask array, with that
+    chunk's values as a numpy array (what dask calls a block): one on-disk
+    time chunk (usually one time step) of all variables on the whole grid.
+
+    The copy lets the array holding all variables be freed as soon as the
+    variables needed from it are extracted, instead of living as long as a
+    view.
 
     Parameters
     ----------
-    block : np.ndarray
-        ``(time, variable, cell)`` block holding all variables.
+    array : np.ndarray
+        ``(time, variable, cell)`` values of one chunk.
     index : int
         Position of the variable along the ``variable`` axis.
 
@@ -184,4 +194,4 @@ def _take_variable(block: np.ndarray, index: int) -> np.ndarray:
     np.ndarray
         ``(time, cell)`` copy of the variable's values.
     """
-    return block[:, index].copy()
+    return array[:, index].copy()
