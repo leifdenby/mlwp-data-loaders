@@ -124,29 +124,22 @@ def load_dataset(
     # One chunk per file; each read task gets a block holding its file's path
     path_blocks = da.from_array(np.array(kept), chunks=1)
     chunks = ((1,) * len(kept), (len(common),), (latitude.size,))
-    # One lazy (reference_time, lead_time, grid_index) array per variable. Each
-    # is a single dask layer that calls _read_variable once per file, turning
-    # that file's path into its (1, lead_time, grid_index) values.
-    data_vars = {}
-    for name, template in templates.items():
-        # `empty_result` is an empty array of the result's type, dtype and
-        # number of dims, so dask need not call _read_variable to find them out
-        empty_result = np.empty((0, 0, 0), dtype=template.dtype)
-        variable_data = path_blocks.map_blocks(
-            _read_variable,
-            name,
-            storage_options=storage_options,
-            new_axis=[1, 2],  # the lead_time and grid_index axes are added
-            chunks=chunks,  # one chunk per file, whole lead times and grid
-            meta=empty_result,
-            token=f"anemoi-inference-{name}",  # stable, readable layer name
-        )
-        data_vars[name] = xr.Variable(
+    data_vars = {
+        name: xr.Variable(
             ("reference_time", "lead_time", "grid_index"),
-            variable_data,
+            path_blocks.map_blocks(
+                _read_variable,
+                name,
+                storage_options=storage_options,
+                new_axis=[1, 2],
+                chunks=chunks,
+                meta=np.empty((0, 0, 0), dtype=template.dtype),
+                token=f"anemoi-inference-{name}",
+            ),
             attrs=template.attrs,
         )
-
+        for name, template in templates.items()
+    }
     latitude.attrs.update({"standard_name": "latitude", "units": "degrees_north"})
     longitude.attrs.update({"standard_name": "longitude", "units": "degrees_east"})
     coords = {
