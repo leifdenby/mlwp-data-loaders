@@ -159,20 +159,24 @@ def load_dataset(
         meta=np.empty((0, 0, 0), dtype=np.float64),
         token="harp-obstable-read",
     )
-    meta = np.empty((0, 0), dtype=np.float64)
-    data_vars = {
-        name: (
-            ("valid_time", "code"),
-            data.map_blocks(
-                _take_variable,
-                index,
-                drop_axis=1,
-                meta=meta,
-                token=f"harp-obstable-{name}",
-            ),
+    # Split `data` into one lazy (valid_time, code) array per variable. Each is
+    # a single dask layer that calls _extract_variable_array on every chunk of
+    # `data`, so computing several variables still reads each chunk of valid
+    # times only once.
+    # `empty_result` is an empty array of the result's type, dtype and number
+    # of dims, so dask need not call _extract_variable_array to find them out
+    empty_result = np.empty((0, 0), dtype=np.float64)
+    data_vars = {}
+    for index, name in enumerate(variables):
+        variable_data = data.map_blocks(
+            _extract_variable_array,
+            index,  # position of the variable along the `variable` axis
+            drop_axis=1,  # the variable axis is not in the result
+            meta=empty_result,
+            token=f"harp-obstable-{name}",  # stable, readable name for the layer
         )
-        for index, name in enumerate(variables)
-    }
+        data_vars[name] = (("valid_time", "code"), variable_data)
+
     coords = {
         "valid_time": times.astype("datetime64[s]").astype("datetime64[ns]"),
         "code": codes,
@@ -262,18 +266,23 @@ def _quote(name: str) -> str:
 
 
 def _read_block(
-    block: np.ndarray, variables: list[str], codes: np.ndarray
+    array: np.ndarray, variables: list[str], codes: np.ndarray
 ) -> np.ndarray:
-    """Read one chunk of valid times as a ``(valid_time, variable, station)`` block.
+    """Read one chunk of valid times as a ``(valid_time, variable, station)`` array.
+
+    ``map_blocks`` calls this once per chunk of the dask array of
+    ``(path, times)`` pairs, with that chunk as a numpy array (what dask calls
+    a block).
 
     Values missing from the table, either NULL or without a row for that
     station and valid time, are NaN.
 
     Parameters
     ----------
-    block : np.ndarray
-        Object array holding one ``(path, times)`` pair: the SQLite file and
-        the sorted valid times (as stored in ``validdate``) of the chunk.
+    array : np.ndarray
+        One-element object array holding a ``(path, times)`` pair: the SQLite
+        file and the sorted valid times (as stored in ``validdate``) of the
+        chunk.
     variables : list of str
         Columns of the observation table to read.
     codes : np.ndarray
@@ -282,9 +291,9 @@ def _read_block(
     Returns
     -------
     np.ndarray
-        ``(valid_time, variable, station)`` float64 block.
+        ``(valid_time, variable, station)`` float64 values of the chunk.
     """
-    path, times = block[0]
+    path, times = array[0]
     columns = ", ".join(_quote(name) for name in ["validdate", "SID", *variables])
     query = f"SELECT {columns} FROM {TABLE} WHERE validdate BETWEEN ? AND ?"
     out = np.full((times.size, len(variables), codes.size), np.nan)
@@ -298,16 +307,21 @@ def _read_block(
     return out
 
 
-def _take_variable(block: np.ndarray, index: int) -> np.ndarray:
-    """Return one variable of a ``(valid_time, variable, station)`` block.
+def _extract_variable_array(array: np.ndarray, index: int) -> np.ndarray:
+    """Extract one variable from a ``(valid_time, variable, station)`` array.
 
-    The copy lets the block holding all variables be freed as soon as the
-    variables needed from it are taken, instead of living as long as a view.
+    ``map_blocks`` calls this once per chunk of the dask array, with that
+    chunk's values as a numpy array (what dask calls a block): one chunk of
+    valid times of all variables at all stations, as read by ``_read_block``.
+
+    The copy lets the array holding all variables be freed as soon as the
+    variables needed from it are extracted, instead of living as long as a
+    view.
 
     Parameters
     ----------
-    block : np.ndarray
-        ``(valid_time, variable, station)`` block holding all variables.
+    array : np.ndarray
+        ``(valid_time, variable, station)`` values of one chunk.
     index : int
         Position of the variable along the ``variable`` axis.
 
@@ -316,4 +330,4 @@ def _take_variable(block: np.ndarray, index: int) -> np.ndarray:
     np.ndarray
         ``(valid_time, station)`` copy of the variable's values.
     """
-    return block[:, index].copy()
+    return array[:, index].copy()
