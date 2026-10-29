@@ -17,6 +17,7 @@ record and of the number of variables, this loader
 
 from typing import Any
 
+import dask.array
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -119,12 +120,17 @@ def load_dataset(
         if len(dates[time_slice]) == 0:
             raise ValueError(f"No time steps of {path} within {valid_times}")
 
-    # Keep the full variable axis and select ensemble member 0 with an integer:
-    # selecting variables with a list would send every read through zarr's
-    # orthogonal indexing, which is about 3x slower and needs 2x the memory.
-    # The lazy (time, variable, cell) dask array of the whole store, with one
-    # dask chunk per on-disk chunk
-    store_data = (
+    # Create one lazy (time, variable, cell) dask array that all the
+    # per-variable arrays below are taken from, so computing several variables
+    # reads and decodes each on-disk chunk only once rather than once per
+    # variable. Each dask chunk is exactly one on-disk chunk: smaller would
+    # decode a zarr chunk several times, larger would hold several time steps
+    # of all variables in memory per task.
+    # All variables are kept, since an on-disk chunk holds all of them and
+    # selecting some would read no less; indexing `variable` with a list (or
+    # `ensemble` with anything but an integer) would also switch every read to
+    # zarr's orthogonal indexing, about 3x slower and needing 2x the memory.
+    store_data: dask.array.Array = (
         ds["data"]
         .isel(time=time_slice, ensemble=0)
         .chunk(
@@ -142,12 +148,12 @@ def load_dataset(
     # reads each on-disk chunk only once.
     # `empty_result` is an empty array of the result's type, dtype and number
     # of dims, so dask need not call _extract_variable_array to find them out
-    empty_result = np.empty((0, 0), dtype=store_data.dtype)
-    data_vars = {}
+    empty_result: np.ndarray = np.empty((0, 0), dtype=store_data.dtype)
+    data_vars: dict[str, tuple[tuple[str, str], dask.array.Array]] = {}
     for name in variables:
         # position of the variable along the store's `variable` axis
         index = available_variable_names.index(name)
-        variable_data = store_data.map_blocks(
+        variable_data: dask.array.Array = store_data.map_blocks(
             _extract_variable_array,
             index,
             drop_axis=1,  # the variable axis is not in the result
